@@ -1,25 +1,92 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <!-- Linking our static CSS file -->
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body { background-color: #f4f6f9; font-family: sans-serif; color: #333; }
+        .container { max-width: 600px; margin: 50px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+        
+        .input-group { display: flex; margin: 20px 0; gap: 10px; }
+        .input-group input { flex: 1; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        .input-group button { padding: 10px 20px; font-size: 16px; background-color: #00ffcc; color: #333; border: none; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        .input-group button:hover { background-color: #00e6b8; }
+        
+        ul { padding-left: 20px; }
+        li { margin: 10px 0; font-size: 16px; }
+    </style>
 </head>
 <body>
 
     <div class="container">
         <h1>Welcome back, {{ username }}!</h1>
-        <p>This page was generated dynamically by combining FastAPI and HTML templates.</p>
+        <p>這是一個結合 FastAPI 後端與網頁輸入框的即時互動介面。</p>
         
+        <!-- 【新增的輸入區塊】 -->
+        <div class="input-group">
+            <input type="text" id="projectInput" placeholder="請輸入新專案名稱... (例如: YOLO Vision)">
+            <button onclick="submitProject()">新增專案</button>
+        </div>
+
         <h3>Your Current Projects:</h3>
-        <ul>
-            <!-- Jinja2 loop syntax to dynamically build a list from Python data -->
+        <ul id="projectList">
+            <!-- 初始由 Jinja2 渲染後端傳來的資料 -->
             {% for item in items %}
                 <li>{{ item }}</li>
             {% endfor %}
         </ul>
     </div>
 
+    <!-- 前端與後端通訊的 JavaScript -->
+    <script>
+        async function submitProject() {
+            const inputField = document.getElementById('projectInput');
+            const projectName = inputField.value;
+
+            if (!projectName.trim()) {
+                alert('請先輸入專案名稱！');
+                return;
+            }
+
+            try {
+                // 發送 POST 請求給 FastAPI 後端
+                const response = await fetch('/api/add-project', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ project_name: projectName })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // 畫面的動態更新：在不重整網頁的情況下，直接把新項目串進 <ul> 列表裡
+                    const ul = document.getElementById('projectList');
+                    const li = document.createElement('li');
+                    li.textContent = projectName;
+                    ul.appendChild(li);
+
+                    // 清空輸入框
+                    inputField.value = '';
+                } else {
+                    alert('新增失敗，後端拒絕了請求。');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('連線發生錯誤！');
+            }
+        }
+
+        // 支援按 Enter 鍵直接送出
+        document.getElementById('projectInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitProject();
+            }
+        });
+    </script>
 </body>
 </html>
