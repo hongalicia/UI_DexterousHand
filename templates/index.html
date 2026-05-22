@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <!-- Linking our static CSS file -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Welcome back, {{ username }}!</h1>
+        <p>This page was generated dynamically by combining FastAPI and HTML templates.</p>
+        
+        <h3>Your Current Projects:</h3>
+        <ul>
+            <!-- Jinja2 loop syntax to dynamically build a list from Python data -->
+            {% for item in items %}
+                <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+</body>
+</html>
