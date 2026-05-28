@@ -3,90 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-        body { background-color: #f4f6f9; font-family: sans-serif; color: #333; }
-        .container { max-width: 600px; margin: 50px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; }
-        
-        .input-group { display: flex; margin: 20px 0; gap: 10px; }
-        .input-group input { flex: 1; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
-        .input-group button { padding: 10px 20px; font-size: 16px; background-color: #00ffcc; color: #333; border: none; font-weight: bold; border-radius: 4px; cursor: pointer; transition: 0.2s; }
-        .input-group button:hover { background-color: #00e6b8; }
-        
-        ul { padding-left: 20px; }
-        li { margin: 10px 0; font-size: 16px; }
-    </style>
+    <title>智能機器人分揀與派送控制中心</title>
+    <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
-
-    <div class="container">
-        <h1>Welcome back, {{ username }}!</h1>
-        <p>這是一個結合 FastAPI 後端與網頁輸入框的即時互動介面。</p>
-        
-        <!-- 【新增的輸入區塊】 -->
-        <div class="input-group">
-            <input type="text" id="projectInput" placeholder="請輸入新專案名稱... (例如: YOLO Vision)">
-            <button onclick="submitProject()">新增專案</button>
+    <header class="app-header">
+        <div class="logo-area">
+            <span class="icon">🤖</span>
+            <h1>智能機器人分揀與派送控制中心</h1>
         </div>
+        <div class="system-status">
+            系統連線狀態: <span class="status-indicator online">🟢 正常</span>
+        </div>
+    </header>
 
-        <h3>Your Current Projects:</h3>
-        <ul id="projectList">
-            <!-- 初始由 Jinja2 渲染後端傳來的資料 -->
-            {% for item in items %}
-                <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
-    </div>
+    <main class="app-container">
+        
+        <section class="column column-left">
+            <div class="panel-header">
+                <h2>【區塊 1】指令與佇列</h2>
+            </div>
+            
+            <div class="panel-body">
+                <div class="input-section">
+                    <button class="btn btn-voice">🎤 語音輸入指令</button>
+                    <div class="text-input-group">
+                        <input type="text" id="commandInput" placeholder="例如：我要把A針筒放入1號箱子..." value="我要把A針筒放入1號箱子，把B針筒放入2號箱子">
+                        <button class="btn btn-primary" id="parseBtn" onclick="showPreview()">解析指令</button>
+                    </div>
 
-    <!-- 前端與後端通訊的 JavaScript -->
-    <script>
-        async function submitProject() {
-            const inputField = document.getElementById('projectInput');
-            const projectName = inputField.value;
+                    <div class="command-confirm-box" id="previewBox" style="display: none;">
+                        <div class="confirm-header">
+                            <span class="warning-icon">⚠️</span>
+                            <span>指令解析預覽，請確認：</span>
+                        </div>
+                        <div class="parsed-script">
+                            <div class="script-row">
+                                <span class="object">A 針筒</span>
+                                <span class="arrow">➔</span>
+                                <span class="target">1 號箱子</span>
+                            </div>
+                            <div class="script-row">
+                                <span class="object">B 針筒</span>
+                                <span class="arrow">➔</span>
+                                <span class="target">2 號箱子</span>
+                            </div>
+                        </div>
+                        <div class="confirm-actions">
+                            <button class="btn btn-sm btn-success action-btn" onclick="confirmCommand()">✔ 確認並加入佇列</button>
+                            <button class="btn btn-sm btn-danger action-btn" onclick="modifyCommand()">✖ 修改指令</button>
+                        </div>
+                    </div>
+                </div>
 
-            if (!projectName.trim()) {
-                alert('請先輸入專案名稱！');
-                return;
-            }
+                <div class="queue-section">
+                    <h3>--- 任務佇列 Queue ---</h3>
+                    <div class="queue-list">
+                        <div class="queue-item status-info active">
+                            <div class="item-header">
+                                <span class="task-id">任務 #001</span>
+                                <span class="badge badge-warning">待驗證</span>
+                            </div>
+                            <div class="item-content">
+                                <p class="parsed-text"><strong>[批次]</strong> A放1號箱，B放2號箱</p>
+                            </div>
+                        </div>
 
-            try {
-                // 發送 POST 請求給 FastAPI 後端
-                const response = await fetch('/api/add-project', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ project_name: projectName })
-                });
+                        <div class="queue-item status-muted">
+                            <div class="item-header">
+                                <span class="task-id">任務 #002</span>
+                                <span class="badge badge-muted">排隊中</span>
+                            </div>
+                            <div class="item-content">
+                                <p class="parsed-text"><strong>[批次]</strong> 將所有C類物品挑出</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-                if (response.ok) {
-                    const result = await response.json();
+        <section class="column column-center">
+            <div class="panel-header tabs-header">
+                <button class="tab-btn active">◉ NVIDIA Isaac Sim 模擬畫面</button>
+                <button class="tab-btn">○ 實體相機攝影機</button>
+            </div>
+            
+            <div class="panel-body visual-body">
+                <div class="stream-container">
+                    <div class="stream-placeholder">
+                        <div class="status-icon" style="font-size: 40px; margin-bottom: 15px; color: #8b949e;">⏸️</div>
+                        <p class="stream-text">等待授權...</p>
+                        <p class="stream-subtext">請於右側面板點擊「開始虛擬驗證」以生成 cuRobo 軌跡</p>
+                    </div>
+                </div>
+
+                <div class="playback-container">
+                    <div class="progress-info">
+                        <span style="color: #8b949e;">模擬路軌演練進度 (尚未啟動)</span>
+                        <span class="progress-percentage" style="color: #8b949e;">0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="column column-right">
+            <div class="panel-header">
+                <h2>【區塊 3】狀態與控制面板</h2>
+            </div>
+            
+            <div class="panel-body">
+                <div class="task-meta">
+                    <span class="meta-label">當前執行單號：</span>
+                    <span class="meta-value">#Task-001 (批次作業)</span>
+                </div>
+
+                <div class="result-card">
+                    <h3>🔍 批次辨識總覽</h3>
+                    <div class="card-content">
+                        <div class="batch-summary-header" style="border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 10px;">
+                            <span style="font-size: 16px; font-weight: bold; color: #c9d1d9;">📦 共偵測到 <span style="color: #58a6ff; font-size: 18px;">10</span> 件物品</span>
+                        </div>
+                        <div class="batch-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <div class="batch-item" style="display: flex; justify-content: space-between; font-size: 13px;">
+                                <span>A 類物體：<strong>6 件</strong></span>
+                                <span style="color: #8b949e;">➔ 前往 <span class="target-highlight">1 號箱</span></span>
+                            </div>
+                            <div class="batch-item" style="display: flex; justify-content: space-between; font-size: 13px;">
+                                <span>B 類物體：<strong>4 件</strong></span>
+                                <span style="color: #8b949e;">➔ 前往 <span class="target-highlight">2 號箱</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workflow-section">
+                    <div class="status-title">當前任務狀態：<span class="status-text text-warning">等待虛擬驗證授權</span></div>
                     
-                    // 畫面的動態更新：在不重整網頁的情況下，直接把新項目串進 <ul> 列表裡
-                    const ul = document.getElementById('projectList');
-                    const li = document.createElement('li');
-                    li.textContent = projectName;
-                    ul.appendChild(li);
+                    <div class="stepper-vertical">
+                        <div class="step checked">
+                            <div class="step-circle">✓</div>
+                            <div class="step-content">
+                                <h4>1. 語意與視覺清點完成</h4>
+                                <p class="step-desc">批次數量與分類目標對齊無誤</p>
+                            </div>
+                        </div>
+                        
+                        <div class="step active">
+                            <div class="step-circle">2</div>
+                            <div class="step-content" style="width: 100%;">
+                                <h4>2. 虛擬路徑與碰撞模擬</h4>
+                                <p class="step-desc" style="margin-bottom: 10px;">請啟動 cuRobo 計算 10 件物品的連續軌跡</p>
+                                <button class="btn btn-primary" style="width: 100%; padding: 10px;">▶ 開始虛擬驗證</button>
+                            </div>
+                        </div>
 
-                    // 清空輸入框
-                    inputField.value = '';
-                } else {
-                    alert('新增失敗，後端拒絕了請求。');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('連線發生錯誤！');
-            }
-        }
+                        <div class="step pending">
+                            <div class="step-circle" style="background-color: transparent; color: #8b949e;">3</div>
+                            <div class="step-content" style="opacity: 0.5;">
+                                <h4>3. 實體手臂批次操作</h4>
+                                <p class="step-desc">需先完成虛擬驗證</p>
+                            </div>
+                        </div>
+                    </div>
 
-        // 支援按 Enter 鍵直接送出
-        document.getElementById('projectInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                submitProject();
-            }
-        });
-    </script>
+                    <div class="action-group">
+                        <button class="btn btn-lg btn-success-action btn-disabled" disabled style="opacity: 0.5; cursor: not-allowed;">🟢 確認無誤，開始實體夾取</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>

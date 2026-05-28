@@ -1,3 +1,4 @@
+import secrets
 import uvicorn
 from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.responses import HTMLResponse, JSONResponse  # 引入 JSONResponse
@@ -7,6 +8,9 @@ from pydantic import BaseModel                             # 引入 Pydantic 用
 
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.openapi.docs import get_swagger_ui_html
+
+#add import 
+from image_processor import pop_up_image
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 security = HTTPBasic()
@@ -21,12 +25,18 @@ PROJECT_DB = ["Robot Control Panel", "Data Generator", "Simulation Dashboard"]
 class ProjectCreate(BaseModel):
     project_name: str
 
+class SpeedInput(BaseModel):
+    value: int
+
 
 def admin_auth(credentials: HTTPBasicCredentials = Depends(security)):
     correct_username = "j300"
     correct_password = "j300"
     
-    if credentials.username != correct_username or credentials.password != correct_password:
+    is_correct_username = secrets.compare_digest(credentials.username, correct_username)
+    is_correct_password = secrets.compare_digest(credentials.password, correct_password)
+    
+    if not (is_correct_username and is_correct_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="帳號或密碼錯誤",
@@ -66,6 +76,22 @@ def add_project(project: ProjectCreate):
     PROJECT_DB.append(name)
     return {"status": "success", "message": f"成功新增專案: {name}", "current_projects": PROJECT_DB}
 
+@app.post("/api/calculate-speed")
+def calculate_speed(data: SpeedInput):
+    raw_value = data.value
+    
+    processed_result = int(raw_value) * 2  # 假設這是一段複雜的運算
+    
+    return {"status": "ok", "result": processed_result}
+
+@app.post("/api/show-image")
+def trigger_show_image():
+    try:
+        message = pop_up_image()
+        return {"status": "success", "message": message}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"後端執行失敗: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
